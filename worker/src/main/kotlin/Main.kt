@@ -42,7 +42,8 @@ fun getConfigModule(): Module {
         single {
             WorkerConfig(
                 creationParallelism = System.getenv("CREATION_WORKERS")?.toIntOrNull() ?: 1,
-                executionParallelism = System.getenv("EXECUTION_WORKERS")?.toIntOrNull() ?: 1
+                executionParallelism = System.getenv("EXECUTION_WORKERS")?.toIntOrNull() ?: 1,
+                buildLanguageImages = System.getenv("BUILD_LANGUAGE_IMAGES")?.toBooleanStrictOrNull() ?: true
             )
         }
     }

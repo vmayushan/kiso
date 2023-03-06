@@ -18,7 +18,7 @@ Currently, C# and Python scripts are supported.
 <!-- GETTING STARTED -->
 ## Getting Started
 
-### Prerequisites
+### Running locally in IDE
 
 To start or execute integration tests project locally you will need mongo and redis
 * mongo
@@ -30,6 +30,13 @@ To start or execute integration tests project locally you will need mongo and re
   docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
   ```
 ---
+
+### Running with Docker Compose
+To start all services (api, worker and reducer), mongo and redis 
+  ```sh
+  docker-compose up -d
+  ```
+
 ## Built With
 
 * Kotlin/JVM

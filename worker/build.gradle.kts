@@ -2,13 +2,14 @@ plugins {
     kotlin("jvm") version "1.8.10"
     kotlin("plugin.serialization") version "1.8.10"
     application
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 group = "com.example"
 version = "0.0.1"
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("kiso.worker.MainKt")
 }
 
 repositories {

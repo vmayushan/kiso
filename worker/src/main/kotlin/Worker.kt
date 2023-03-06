@@ -19,7 +19,9 @@ class Worker(
     private lateinit var processors: List<Job>
 
     suspend fun init() {
-        containerPool.buildImages()
+        if(config.buildLanguageImages) {
+            containerPool.buildImages()
+        }
         containerPool.removeStaledContainers()
     }
 
