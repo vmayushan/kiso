@@ -4,6 +4,7 @@ data class DockerContainerRuntimeLimits(
     val cpuCount: Long,
     val memoryLimitBytes: Long,
     val workdirSizeLimitBytes: Long,
-    val tmpSizeLimitBytes: Long
+    val tmpSizeLimitBytes: Long,
+    val stdoutLimitBytes: Long
 )
 

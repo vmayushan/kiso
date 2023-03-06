@@ -66,7 +66,7 @@ It's responsibility is to take execution jobs from an execution queue and to run
 * graceful shutdown: after SIGINT signal worker stops receiving new jobs and finishes currently running jobs
 * ability to recover after permanent failures: all running jobs are taken by other workers
 * supports idle container precreation to improve execution preparation time
-* security by using docker isolation features to set limits on CPU, RAM, Disk usage, limiting internet connection and using readonly container file system
+* security by using docker isolation features to set limits on CPU, RAM, Disk, STDOUT, limiting internet connection and using readonly container file system
 
 ---
 

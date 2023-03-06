@@ -4,24 +4,25 @@ import kiso.worker.docker.container.DockerContainer
 import kiso.worker.docker.container.DockerContainerRuntimeLimits
 import kiso.worker.docker.container.DockerExecCmdOut
 import kiso.worker.docker.image.DockerImageBuilder
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.firstOrNull
+import kiso.worker.docker.image.DockerImageConstants
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import kotlin.test.*
 
 class DockerContainerIntegrationTest {
     companion object {
         private const val imageName = "test-image"
+        private const val MB = 1024 * 1024L
         private val runtimeLimits = DockerContainerRuntimeLimits(
             cpuCount = 1,
-            memoryLimitBytes = 50 * 1024 * 1024,
-            workdirSizeLimitBytes = 30 * 1024 * 1024,
-            tmpSizeLimitBytes = 30 * 1024 * 1024
+            memoryLimitBytes = 50 * MB,
+            workdirSizeLimitBytes = 30 * MB,
+            tmpSizeLimitBytes = 30 * MB,
+            stdoutLimitBytes = 2 * MB
         )
 
         @BeforeAll
@@ -31,11 +32,16 @@ class DockerContainerIntegrationTest {
         }
     }
 
-    private val container = DockerContainer(UUID.randomUUID().toString())
+    private val container = DockerContainer(
+        UUID.randomUUID().toString(),
+        imageName,
+        emptyMap(),
+        runtimeLimits
+    )
 
     @BeforeEach
     fun setUp() = runBlocking {
-        container.startContainer(imageName, emptyMap(), runtimeLimits)
+        container.startContainer()
     }
 
     @AfterEach
@@ -85,7 +91,8 @@ class DockerContainerIntegrationTest {
             val diskStressCmd = "stress --hdd 1 --hdd-bytes 1G"
             container
                 .execCommand(diskStressCmd.split(' ').toTypedArray())
-                .firstOrNull { it is DockerExecCmdOut.Log && it.message.contains("No space left on device") } != null
+                .filterIsInstance<DockerExecCmdOut.Log>()
+                .firstOrNull { it.message.contains("No space left on device") } != null
         }
     }
 
@@ -94,17 +101,33 @@ class DockerContainerIntegrationTest {
         val memoryStressCmd = "stress --vm 1 --vm-bytes 1G --vm-keep -t 1"
         val execCmdOut = container
             .execCommand(memoryStressCmd.split(' ').toTypedArray())
-            .firstOrNull { it is DockerExecCmdOut.Exit } as DockerExecCmdOut.Exit
+            .filterIsInstance<DockerExecCmdOut.Exit>()
+            .firstOrNull()
 
-        assertNotEquals(0, execCmdOut.exitCode)
+        assertNotEquals(0, execCmdOut?.exitCode)
     }
 
     @Test
     fun `containers runs as non root user`(): Unit = runBlocking {
         val execCmdOut = container
             .execCommand(arrayOf("whoami"))
-            .firstOrNull { it is DockerExecCmdOut.Log } as DockerExecCmdOut.Log
+            .filterIsInstance<DockerExecCmdOut.Log>()
+            .firstOrNull()
 
-        assertNotEquals("root", execCmdOut.message)
+        assertNotNull(execCmdOut?.message)
+        assertContains(execCmdOut!!.message, DockerImageConstants.User)
+    }
+
+    @Test
+    fun `exceeding stdout limit is rejected`(): Unit = runBlocking {
+        val fileName = "stdout-test.sh"
+        val script = """while true; do echo "Infinitely repeated log line"; done"""
+        container.createFileInContainer(script, fileName)
+
+        assertThrows<CancellationException> {
+            container
+                .execCommand(arrayOf("sh", fileName))
+                .collect()
+        }
     }
 }

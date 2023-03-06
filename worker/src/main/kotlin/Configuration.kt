@@ -11,7 +11,8 @@ private val defaultRuntimeLimits = DockerContainerRuntimeLimits(
     cpuCount = 1,
     memoryLimitBytes = 100 * MB,
     workdirSizeLimitBytes = 50 * MB,
-    tmpSizeLimitBytes = 50 * MB
+    tmpSizeLimitBytes = 50 * MB,
+    stdoutLimitBytes = 2 * MB
 )
 
 val Language.imageConfig

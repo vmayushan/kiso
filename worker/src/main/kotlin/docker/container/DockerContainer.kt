@@ -14,13 +14,12 @@ import mu.KLogging
 import java.util.*
 
 class DockerContainer(
-    val containerId: String
+    val containerId: String,
+    private val imageName: String,
+    private val labels: Map<String, String>,
+    private val limits: DockerContainerRuntimeLimits
 ) {
-    suspend fun startContainer(
-        imageName: String,
-        labels: Map<String, String>,
-        limits: DockerContainerRuntimeLimits
-    ) {
+    suspend fun startContainer() {
         logger.info { "Starting container $containerId" }
 
         withContext(Dispatchers.IO) {
@@ -103,14 +102,20 @@ class DockerContainer(
                 .withAttachStderr(true)
                 .exec()
         }
-
+        var stdoutSizeBytes = 0
         return callbackFlow {
             DockerClient
                 .execStartCmd(execCreate.id)
                 .exec(object : ResultCallback.Adapter<Frame>() {
                     override fun onNext(value: Frame) {
                         logger.debug { value }
-                        trySendBlocking(value.asLog())
+
+                        stdoutSizeBytes += value.payload.size
+                        if(stdoutSizeBytes > limits.stdoutLimitBytes) {
+                            cancel(CancellationException("Too much output"))
+                        } else {
+                            trySendBlocking(value.asLog())
+                        }
                     }
 
                     override fun onError(error: Throwable) {
@@ -147,13 +152,23 @@ class DockerContainer(
     }
 
     companion object : KLogging() {
-        suspend fun listAllByLabel(labels: Map<String, String>): List<DockerContainer> =
-            withContext(Dispatchers.IO) {
+        suspend fun removeAllByLabel(labels: Map<String, String>) {
+            val containers = withContext(Dispatchers.IO) {
                 DockerClient
                     .listContainersCmd()
                     .withLabelFilter(labels)
                     .exec()
-                    .map { DockerContainer(containerId = it.id) }
             }
+
+            containers.forEach {
+                withContext(Dispatchers.IO) {
+                    DockerClient
+                        .removeContainerCmd(it.id)
+                        .withRemoveVolumes(true)
+                        .withForce(true)
+                        .exec()
+                }
+            }
+        }
     }
 }

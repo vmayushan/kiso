@@ -48,8 +48,13 @@ class DockerContainerPool(private val config: DockerContainerPoolConfig) {
 
     private suspend fun createContainer(image: DockerImageConfig): DockerContainer {
         val containerId = "${image.imageName}-${UUID.randomUUID()}"
-        val container = DockerContainer(containerId)
-        container.startContainer(image.imageName, getContainerLabel(), image.runtimeLimits)
+        val container = DockerContainer(
+            containerId,
+            image.imageName,
+            getContainerLabel(),
+            image.runtimeLimits
+        )
+        container.startContainer()
         return container
     }
 
@@ -65,9 +70,7 @@ class DockerContainerPool(private val config: DockerContainerPoolConfig) {
     suspend fun removeStaledContainers() {
         logger.info { "Removing staled containers" }
 
-        DockerContainer
-            .listAllByLabel(getContainerLabel())
-            .forEach { it.removeContainer() }
+        DockerContainer.removeAllByLabel(getContainerLabel())
     }
 
     private fun getContainerLabel(): Map<String, String> = mapOf("nodeName" to config.nodeName)

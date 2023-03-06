@@ -23,7 +23,7 @@ class DockerContainerPoolTest {
         coEvery { DockerImageBuilder.buildImage(any(), any()) } returns Unit
 
         mockkConstructor(DockerContainer::class)
-        coEvery { anyConstructed<DockerContainer>().startContainer(any(), any(), any()) } returns Unit
+        coEvery { anyConstructed<DockerContainer>().startContainer() } returns Unit
     }
 
     @Test
@@ -38,8 +38,7 @@ class DockerContainerPoolTest {
         val job = containerPool.startContainerCreator()
 
         // Assert
-        verifyContainersStarted(image1.imageName, count = 3)
-        verifyContainersStarted(image2.imageName, count = 2)
+        verifyContainersStarted(count = image1.idleContainersCount + image2.idleContainersCount)
         job.cancelAndJoin()
     }
 
@@ -51,13 +50,13 @@ class DockerContainerPoolTest {
         val containerPool = DockerContainerPool(config)
         val job = containerPool.startContainerCreator()
 
-        verifyContainersStarted(image.imageName, count = 3)
+        verifyContainersStarted(count = 3)
 
         // Act
         repeat(2) { containerPool.takeOrCreate(image) }
 
         // Assert
-        verifyContainersStarted(image.imageName, count = 5)
+        verifyContainersStarted(count = 5)
 
         job.cancelAndJoin()
     }
@@ -70,19 +69,19 @@ class DockerContainerPoolTest {
         val containerPool = DockerContainerPool(config)
 
         val job = containerPool.startContainerCreator()
-        verifyContainersStarted(image.imageName, count = 0)
+        verifyContainersStarted(count = 0)
 
         // Act
         repeat(2) { containerPool.takeOrCreate(image) }
 
         // Assert
-        verifyContainersStarted(image.imageName, count = 2)
+        verifyContainersStarted(count = 2)
         job.cancelAndJoin()
     }
 
-    private fun verifyContainersStarted(imageName: String, count: Int) =
+    private fun verifyContainersStarted(count: Int) =
         coVerify(timeout = 3000, exactly = count) {
-            anyConstructed<DockerContainer>().startContainer(imageName, any(), any())
+            anyConstructed<DockerContainer>().startContainer()
         }
 
     private fun createImageConfig(imageName: String, idleContainersCount: Int) =
