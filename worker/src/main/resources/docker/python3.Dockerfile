@@ -1,0 +1,18 @@
+FROM pypy:3.9-buster
+WORKDIR /app
+
+ARG DOCKER_SANDBOX_USER
+ENV DOCKER_SANDBOX_USER=${DOCKER_SANDBOX_USER}
+
+ARG DOCKER_SANDBOX_WORKDIR
+ENV DOCKER_SANDBOX_WORKDIR=${DOCKER_SANDBOX_WORKDIR}
+
+RUN adduser \
+  --disabled-password \
+  --home /${DOCKER_SANDBOX_WORKDIR} \
+  --gecos '' ${DOCKER_SANDBOX_USER}
+
+WORKDIR /${DOCKER_SANDBOX_WORKDIR}
+CMD tail -f /dev/null
+COPY docker-entrypoint.sh /usr/local/bin/
+ENTRYPOINT ["docker-entrypoint.sh"]
