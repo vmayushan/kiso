@@ -11,7 +11,10 @@ import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import mu.KLogging
-import java.util.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.io.path.pathString
 
 class DockerContainer(
     val containerId: String,
@@ -19,6 +22,7 @@ class DockerContainer(
     private val labels: Map<String, String>,
     private val limits: DockerContainerRuntimeLimits
 ) {
+    private lateinit var inputDirectory: Path
     suspend fun startContainer() {
         logger.info { "Starting container $containerId" }
 
@@ -38,8 +42,10 @@ class DockerContainer(
         }
     }
 
-    private fun buildHostConfig(limitsConfig: DockerContainerRuntimeLimits): HostConfig =
-        HostConfig
+    private fun buildHostConfig(limitsConfig: DockerContainerRuntimeLimits): HostConfig {
+        inputDirectory = Files.createTempDirectory("temp")
+        inputDirectory.toFile().deleteOnExit()
+        return HostConfig
             .newHostConfig()
             .withCpuCount(limitsConfig.cpuCount)
             .withReadonlyRootfs(true)
@@ -53,9 +59,15 @@ class DockerContainer(
                         .withTmpfsOptions(TmpfsOptions().withSizeBytes(limitsConfig.workdirSizeLimitBytes)),
                     Mount()
                         .withTarget("/tmp")
-                        .withTmpfsOptions(TmpfsOptions().withSizeBytes(limitsConfig.tmpSizeLimitBytes))
+                        .withTmpfsOptions(TmpfsOptions().withSizeBytes(limitsConfig.tmpSizeLimitBytes)),
+                    Mount()
+                        .withTarget("/${DockerImageConstants.Inputdir}")
+                        .withReadOnly(true)
+                        .withType(MountType.BIND)
+                        .withSource(inputDirectory.pathString)
                 )
             )
+    }
 
 
     suspend fun removeContainer() {
@@ -140,13 +152,15 @@ class DockerContainer(
     suspend fun createFileInContainer(content: String, fileName: String): Long? {
         logger.info { "Creating file $fileName in container $containerId workdir" }
 
-        val encodedContent = Base64.getEncoder().encodeToString(content.toByteArray())
-        val path = "/${DockerImageConstants.Workdir}/${fileName}"
+        val filePath = Paths.get(inputDirectory.toString(), fileName)
+        withContext(Dispatchers.IO) { Files.write(filePath, content.toByteArray()) }
 
-        val cmd = arrayOf("sh", "-c", "echo '${encodedContent}' | base64 -d> $path")
+        val source = "/${DockerImageConstants.Inputdir}/${fileName}"
+        val destination = "/${DockerImageConstants.Workdir}/${fileName}"
+
+        val cmd = arrayOf("cp", source, destination)
         val exit = execCommand(cmd)
-            .filter { it is DockerExecCmdOut.Exit }
-            .map { it as DockerExecCmdOut.Exit }
+            .filterIsInstance<DockerExecCmdOut.Exit>()
             .firstOrNull()
         return exit?.exitCode
     }

@@ -56,8 +56,8 @@ class DockerContainerIntegrationTest {
 
         val readFileCmd = container
             .execCommand(arrayOf("cat", "mouse"))
-            .filter { it is DockerExecCmdOut.Log }
-            .firstOrNull() as DockerExecCmdOut.Log
+            .filterIsInstance<DockerExecCmdOut.Log>()
+            .firstOrNull()
 
         assertNotNull(readFileCmd)
         assertContains(readFileCmd.message, content)
@@ -77,7 +77,8 @@ class DockerContainerIntegrationTest {
         suspend fun hasNetwork(): Boolean {
             return container
                 .execCommand(arrayOf("sh", fileName))
-                .firstOrNull { it is DockerExecCmdOut.Log && it.message.contains("connectivity") } != null
+                .filterIsInstance<DockerExecCmdOut.Log>()
+                .firstOrNull { it.message.contains("connectivity") } != null
         }
 
         assertTrue { hasNetwork() }

@@ -14,7 +14,8 @@ import kotlin.coroutines.suspendCoroutine
 object DockerImageBuilder {
     private val buildArgs = mapOf(
         "DOCKER_SANDBOX_USER" to DockerImageConstants.User,
-        "DOCKER_SANDBOX_WORKDIR" to DockerImageConstants.Workdir
+        "DOCKER_SANDBOX_WORKDIR" to DockerImageConstants.Workdir,
+        "DOCKER_SANDBOX_INPUTDIR" to DockerImageConstants.Inputdir
     )
 
     suspend fun buildImage(tag: String, dockerFileName: String) {
