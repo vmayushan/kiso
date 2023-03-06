@@ -38,7 +38,12 @@ val Language.runnerConfig
             sourceFile = "Program.cs",
             compileCmd = "dotnet build --no-restore -v=q --nologo",
             executeCmd = "dotnet ./bin/Debug/net6.0/app.dll",
-            installPackageCmd = { "dotnet add package ${it.name}" },
+            installPackageCmd = {
+                if (it.version != null)
+                    "dotnet add package ${it.name} -v ${it.version}"
+                else
+                    "dotnet add package ${it.name}"
+            },
             executionTimeout = 1.hours
         )
 
@@ -46,7 +51,12 @@ val Language.runnerConfig
             sourceFile = "program.py",
             compileCmd = null,
             executeCmd = "pypy ./program.py",
-            installPackageCmd = { "pip install ${it.name}" },
+            installPackageCmd = {
+                if (it.version != null)
+                    "pip install ${it.name}==${it.version}"
+                else
+                    "pip install ${it.name}"
+            },
             executionTimeout = 1.hours
         )
     }
