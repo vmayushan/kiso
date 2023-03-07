@@ -20,6 +20,8 @@ services:
     environment:
       - REDIS_CONNECTION_STRING=redis://kiso-redis-stack:6379
       - BUILD_LANGUAGE_IMAGES=false
+      - CREATION_WORKERS=2
+      - EXECUTION_WORKERS=5
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp
@@ -28,6 +30,24 @@ services:
       - dotnet-sandbox
       - python-sandbox
     container_name: kiso-worker-1
+
+  worker-2:
+    build:
+      dockerfile: worker/Dockerfile
+      context: .
+    environment:
+      - REDIS_CONNECTION_STRING=redis://kiso-redis-stack:6379
+      - BUILD_LANGUAGE_IMAGES=false
+      - CREATION_WORKERS=2
+      - EXECUTION_WORKERS=5
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp:/tmp
+    depends_on:
+      - redis-stack
+      - dotnet-sandbox
+      - python-sandbox
+    container_name: kiso-worker-2
 
   reducer-1:
     build:
