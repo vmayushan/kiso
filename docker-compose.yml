@@ -11,6 +11,10 @@ services:
     depends_on:
       - mongo
       - redis-stack
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
     container_name: kiso-api-1
 
   worker-1:
